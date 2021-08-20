@@ -2,9 +2,12 @@
 
 zimbrassl() {
 
-#Set domain for renew  Define your domain here
+#Set domain for renew
 DOMAIN="zm.kshell.ml"
 
+ls /etc/letsencrypt/live/$DOMAIN/*
+if [ $? -eq 0 ];
+then
 #Stop the jetty or nginx service at Zimbra level
 runuser -l zimbra -c 'zmproxyctl stop'
 runuser -l zimbra -c 'zmmailboxdctl stop'
@@ -54,6 +57,10 @@ else
 runuser -l zimbra -c 'zmcontrol restart'
 echo "Certbot command has issue"
 exit 
+fi
+else 
+echo "SSL Directory Does not exist"
+exit
 fi
 }
 
