@@ -1,7 +1,8 @@
-
 #!/bin/bash
 
-#Set domain for renew (in format openthreat.ro)
+zimbrassl() {
+
+#Set domain for renew  Define your domain here
 DOMAIN="zm.kshell.ml"
 
 #Stop the jetty or nginx service at Zimbra level
@@ -9,7 +10,9 @@ runuser -l zimbra -c 'zmproxyctl stop'
 runuser -l zimbra -c 'zmmailboxdctl stop'
 
 #Renew SSL
-yes 2 | certbot certonly --standalone -d ts.kshell.ml
+yes 2 | certbot certonly --standalone -d $DOMAIN
+if [ $? -eq 0 ];
+then
 
 #Copy new SSL to Zimbra SSL folder
 cp /etc/letsencrypt/live/$DOMAIN/* /opt/zimbra/ssl/letsencrypt/
@@ -40,11 +43,26 @@ cat /etc/letsencrypt/live/$DOMAIN/chain.pem >> /opt/zimbra/ssl/letsencrypt/chain
 
 #Backup Zimbra SSL directory
 cp -a /opt/zimbra/ssl/zimbra /opt/zimbra/ssl/zimbra.$(date "+%Y%m%d")
-
 #Copy the private key under Zimbra SSL path
 cp /opt/zimbra/ssl/zimbra/commercial/commercial.key /opt/zimbra/ssl/zimbra/commercial/commercial.key-back.$(date "+%Y%m%d")
 cp /opt/zimbra/ssl/letsencrypt/privkey.pem /opt/zimbra/ssl/zimbra/commercial/commercial.key
-
+chown zimbra:zimbra /opt/zimbra/ssl/zimbra/commercial/commercial.key
 #Final SSL deployment
 runuser -l zimbra -c 'cd /opt/zimbra/ssl/letsencrypt/ && /opt/zimbra/bin/zmcertmgr deploycrt comm cert.pem chain.pem'
 runuser -l zimbra -c 'zmcontrol restart'
+else
+runuser -l zimbra -c 'zmcontrol restart'
+echo "Certbot command has issue"
+exit 
+fi
+}
+
+#Checking for Certbot
+rpm -q certbot
+if [ $? -eq 0 ]
+then
+zimbrassl
+else
+echo "You need to configure ssl manually first with certbot"
+exit
+fi
